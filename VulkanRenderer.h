@@ -35,11 +35,16 @@ private:
 	VkQueue presentationQueue;
 	VkSurfaceKHR surface;
 	VkSwapchainKHR swapchain;
+
 	std::vector<SwapchainImage> swapChainImages;
+	std::vector<VkFramebuffer> swapChainFramebuffers;
+	std::vector<VkCommandBuffer> commandBuffers;
 
 	VkPipeline graphicsPipeline;
 	VkPipelineLayout pipelineLayout;
 	VkRenderPass renderPass;
+
+	VkCommandPool graphicsCommandPool;
 
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
@@ -51,6 +56,11 @@ private:
 	void createSwapChain();
 	void createRenderPass();
 	void createGraphicsPipeline();
+	void createFramebuffers();
+	void createCommandPool();
+	void createCommandBuffers();
+
+	void recordCommands();
 
 	void getPhysicalDevice();
 
