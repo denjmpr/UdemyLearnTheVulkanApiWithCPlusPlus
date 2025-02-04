@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 
+#include "Mesh.h"
 #include "Utilities.h"
 
 class VulkanRenderer
@@ -27,6 +28,8 @@ private:
 	GLFWwindow* window;
 
 	int currentFrame = 0;
+
+	Mesh firstMesh;
 
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debugMessenger;

@@ -58,6 +58,17 @@ int VulkanRenderer::init(GLFWwindow* newWindow)
 		createSurface();
 		getPhysicalDevice();
 		createLogicalDevice();
+
+		std::vector<Vertex> meshVertices = {
+			{{0.4, -0.4, 0.0}, {1.0f, 0.0f, 0.0f}},
+			{{ 0.4, 0.4, 0.0 }, {0.0f, 1.0f, 0.0f}},
+			{{ -0.4, 0.4, 0.0 }, {0.0f, 0.0f, 1.0f}},
+			{{-0.4, 0.4, 0.0}, {0.0f, 0.0f, 1.0f}},
+			{{ -0.4, -0.4, 0.0 }, {1.0f, 1.0f, 0.0}},
+			{{ 0.4, -0.4, 0.0 }, {1.0f, 0.0f, 0.0f}}
+		};
+		firstMesh = Mesh(mainDevice.physicalDevice, mainDevice.logicalDevice, &meshVertices);
+
 		createSwapChain();
 		createRenderPass();
 		createGraphicsPipeline();
@@ -83,7 +94,7 @@ void VulkanRenderer::draw()
 
 	uint32_t imageIndex;
 	vkAcquireNextImageKHR(mainDevice.logicalDevice, swapchain, std::numeric_limits<uint64_t>::max(), imageAvailable[currentFrame], VK_NULL_HANDLE, &imageIndex);
-	
+
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.waitSemaphoreCount = 1;
@@ -124,6 +135,7 @@ void VulkanRenderer::cleanup()
 {
 	vkDeviceWaitIdle(mainDevice.logicalDevice);
 
+	firstMesh.destroyVertexBuffer();
 	for (size_t i = 0; i < MAX_FRAME_DRAWS; i++)
 	{
 		vkDestroyFence(mainDevice.logicalDevice, drawFences[i], nullptr);
@@ -302,7 +314,7 @@ void VulkanRenderer::createSwapChain()
 
 	uint32_t imageCount = swapChainDetails.surfaceCapabilities.minImageCount + 1;
 
-	if (swapChainDetails.surfaceCapabilities.maxImageCount > 0 
+	if (swapChainDetails.surfaceCapabilities.maxImageCount > 0
 		&& swapChainDetails.surfaceCapabilities.maxImageCount < imageCount)
 	{
 		imageCount = swapChainDetails.surfaceCapabilities.maxImageCount;
@@ -448,12 +460,29 @@ void VulkanRenderer::createGraphicsPipeline()
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderCreateInfo, fragmentShaderCreateInfo };
 
+	VkVertexInputBindingDescription bindingDescription = {};
+	bindingDescription.binding = 0;
+	bindingDescription.stride = sizeof(Vertex);
+	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions;
+
+	attributeDescriptions[0].binding = 0;
+	attributeDescriptions[0].location = 0;
+	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+	attributeDescriptions[1].binding = 0;
+	attributeDescriptions[1].location = 1;
+	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[1].offset = offsetof(Vertex, col);
+
 	VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
 	vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-	vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-	vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-	vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+	vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
+	vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -495,7 +524,7 @@ void VulkanRenderer::createGraphicsPipeline()
 	multisamplingCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
 	VkPipelineColorBlendAttachmentState colourState = {};
-	colourState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT 
+	colourState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
 		| VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	colourState.blendEnable = VK_TRUE;
 
@@ -668,7 +697,11 @@ void VulkanRenderer::recordCommands()
 
 		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-		vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+		VkBuffer vertexBuffers[] = { firstMesh.getVertexBuffer() };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+		vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(firstMesh.getVertexCount()), 1, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -887,7 +920,7 @@ VkSurfaceFormatKHR VulkanRenderer::chooseBestSurfaceFormat(const std::vector<VkS
 
 	for (const auto& format : formats)
 	{
-		if ((format.format == VK_FORMAT_R8G8B8A8_UNORM || format.format == VK_FORMAT_B8G8R8A8_UNORM) 
+		if ((format.format == VK_FORMAT_R8G8B8A8_UNORM || format.format == VK_FORMAT_B8G8R8A8_UNORM)
 			&& format.colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR)
 		{
 			return format;
