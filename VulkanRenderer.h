@@ -23,7 +23,7 @@ public:
 
 	int init(GLFWwindow* newWindow);
 
-	void updateModel(glm::mat4 newModel);
+	void updateModel(int modelId, glm::mat4 newModel);
 
 	void draw();
 	void cleanup();
@@ -37,11 +37,10 @@ private:
 
 	std::vector<Mesh> meshList;
 
-	struct MVP {
+	struct UboViewProjection {
 		glm::mat4 projection;
 		glm::mat4 view;
-		glm::mat4 model;
-	} mvp;
+	} uboViewProjection;
 
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debugMessenger;
@@ -63,8 +62,15 @@ private:
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
 
-	std::vector<VkBuffer> uniformBuffer;
-	std::vector<VkDeviceMemory> uniformBufferMemory;
+	std::vector<VkBuffer> vpUniformBuffer;
+	std::vector<VkDeviceMemory> vpUniformBufferMemory;
+
+	std::vector<VkBuffer> modelDUniformBuffer;
+	std::vector<VkDeviceMemory> modelDUniformBufferMemory;
+
+	VkDeviceSize minUniformBufferOffset;
+	size_t modelUniformAlignment;
+	UboModel* modelTransferSpace;
 
 	VkPipeline graphicsPipeline;
 	VkPipelineLayout pipelineLayout;
@@ -96,11 +102,13 @@ private:
 	void createDescriptorPool();
 	void createDescriptorSets();
 
-	void updateUniformBuffer(uint32_t imageIndex);
+	void updateUniformBuffers(uint32_t imageIndex);
 
 	void recordCommands();
 
 	void getPhysicalDevice();
+
+	void allocateDynamicBufferTransferSpace();
 
 	bool checkValidationLayerSupport(std::vector<const char*>* checkLayers);
 	bool checkInstanceExtensionSupport(std::vector<const char*>* checkExtensions);
