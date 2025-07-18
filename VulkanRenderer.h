@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <array>
 
+#include "stb_image.h"
+
 #include "Mesh.h"
 #include "Utilities.h"
 
@@ -70,6 +72,9 @@ private:
 	std::vector<VkBuffer> vpUniformBuffer;
 	std::vector<VkDeviceMemory> vpUniformBufferMemory;
 
+	std::vector<VkImage> textureImages;
+	std::vector<VkDeviceMemory> textureImageMemory;
+
 	VkPipeline graphicsPipeline;
 	VkPipelineLayout pipelineLayout;
 	VkRenderPass renderPass;
@@ -125,6 +130,10 @@ private:
 		VkMemoryPropertyFlags propFlags, VkDeviceMemory* imageMemory);
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	VkShaderModule createShaderModule(const std::vector<char>& code);
+
+	int createTexture(std::string fileName);
+
+	stbi_uc* loadTextureFile(std::string fileName, int* width, int* height, VkDeviceSize* imageSize);
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
