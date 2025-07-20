@@ -18,6 +18,7 @@ struct Vertex
 {
 	glm::vec3 pos;
 	glm::vec3 col;
+	glm::vec2 tex;
 };
 
 struct QueueFamilyIndices {
